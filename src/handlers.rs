@@ -21,18 +21,24 @@ pub async fn public_view_handler() -> Response<String> {
 }
 
 pub async fn get_token_handler(Json(user): Json<User>) -> Response<String> {
-    let token = get_jwt(user);
 
-    Response::builder()
-        .status(StatusCode::OK)
-        .header(header::CONTENT_TYPE, "application/json")
-        .body(json!({ "token": token }).to_string())
-        .unwrap()
+    match get_jwt(user) {
+        Ok(token) => Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_TYPE, "application/json")
+            .body(json!({ "token": token }).to_string())
+            .unwrap(),
+        Err(err) => Response::builder()
+            .status(StatusCode::UNAUTHORIZED)
+            .body(json!({ "error": format!("{}", err) }).to_string())
+            .unwrap(),
+    }
+
 }
 
-fn get_jwt(user: User) -> String {
+fn get_jwt(user: User) -> Result<String, jsonwebtoken::errors::Error> {
     println!("user: {:?}", user);
-    return generate_jwt(&user.email).expect("Failed to generate JWT");
+    return generate_jwt(&user.email);
 }
 
 fn generate_jwt(user_email: &str) -> Result<String, jsonwebtoken::errors::Error> {
